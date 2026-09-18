@@ -1,0 +1,10 @@
+spring:
+  datasource:
+    driver-class-name: org.sqlite.JDBC
+    url: jdbc:sqlite:e:/XM1/b2c/shop/b2cmall.db
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.lxs.b2cmall.order.entity
+  configuration:
+    map-underscore-to-camel-case: true
