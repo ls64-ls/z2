@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zsl.b2cmall.shop.dao.ProductMapper">
+
+    <sql id="filterWhere">
+        <where>
+            shop_id = #{shopId}
+            <if test="name != null and name != ''">
+                AND name LIKE '%' || #{name} || '%'
+            </if>
+            <if test="productType != null and productType != ''">
+                AND product_type = #{productType}
+            </if>
+            <if test="categoryLabel != null and categoryLabel != ''">
+                <choose>
+                    <when test="categoryLabel == '实物商品'">AND type = 1</when>
+                    <when test="categoryLabel == '虚拟商品'">AND type = 2</when>
+                </choose>
+            </if>
+            <if test="status != null">
+                AND status = #{status}
+            </if>
+            <if test="category != null and category != ''">
+                AND category = #{category}
+            </if>
+            <if test="deliveryTypeList != null and deliveryTypeList.size() > 0">
+                AND (
+                <foreach collection="deliveryTypeList" item="dt" separator=" OR ">
+                    delivery_types LIKE '%' || #{dt} || '%'
+                </foreach>
+                )
+            </if>
+            <if test="stockWarning != null and stockWarning == 1">
+                AND stock_threshold &gt; 0
+                AND (IFNULL(warehouse_stock,0) + IFNULL(store_stock,0)) &lt; stock_threshold
+            </if>
+        </where>
+    </sql>
+
+    <select id="queryPage" parameterType="com.zsl.b2cmall.shop.request.ProductQueryVO"
+            resultType="com.zsl.b2cmall.shop.entity.ProductPO">
+        SELECT * FROM tb_product
+        <include refid="filterWhere"/>
+        ORDER BY sort DESC, id DESC
+        LIMIT #{pageSize} OFFSET #{offset}
+    </select>
+
+    <select id="countQuery" parameterType="com.zsl.b2cmall.shop.request.ProductQueryVO" resultType="long">
+        SELECT COUNT(*) FROM tb_product
+        <include refid="filterWhere"/>
+    </select>
+
+    <select id="queryAll" parameterType="com.zsl.b2cmall.shop.request.ProductQueryVO"
+            resultType="com.zsl.b2cmall.shop.entity.ProductPO">
+        SELECT * FROM tb_product
+        <include refid="filterWhere"/>
+        ORDER BY sort DESC, id DESC
+    </select>
+
+    <select id="mallList" resultType="com.zsl.b2cmall.shop.entity.ProductPO">
+        SELECT * FROM tb_product WHERE status = 1
+        <if test="category != null and category != '' and category != '全部'">
+            AND category = #{category}
+        </if>
+        <choose>
+            <when test="sort == 'sales'">ORDER BY sales DESC, sort DESC</when>
+            <when test="sort == 'priceAsc'">ORDER BY sale_price ASC</when>
+            <when test="sort == 'priceDesc'">ORDER BY sale_price DESC</when>
+            <otherwise>ORDER BY sort DESC, id DESC</otherwise>
+        </choose>
+    </select>
+
+    <select id="distinctCategories" resultType="string">
+        SELECT DISTINCT category FROM tb_product WHERE status = 1 ORDER BY category
+    </select>
+
+    <update id="batchUpdate">
+        UPDATE tb_product SET ${column} = #{value} WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </update>
+
+</mapper>

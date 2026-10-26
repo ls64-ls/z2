@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZSL 甄选商城 - 商品分类列表</title>
+    <link rel="stylesheet" href="assets/common.css">
+    <style>
+        body { background: #f5f5f5; }
+
+        .mall-header {
+            height: 62px; background: #fff; display: flex; align-items: center;
+            padding: 0 32px; gap: 36px; position: sticky; top: 0; z-index: 100;
+            box-shadow: 0 1px 4px rgba(0,0,0,.06);
+        }
+        .mall-logo { font-size: 20px; font-weight: 700; color: #e93b3d; white-space: nowrap; }
+        .mall-logo span { font-size: 13px; color: #9ca3af; font-weight: 400; margin-left: 8px; }
+        .mall-nav { display: flex; gap: 20px; flex: 1; }
+        .mall-nav a { font-size: 14px; color: #4b5563; padding: 6px 0; }
+        .mall-nav a.active { color: #e93b3d; font-weight: 600; border-bottom: 2px solid #e93b3d; }
+        .mall-user { display: flex; align-items: center; gap: 10px; font-size: 13px; color: #6b7280; }
+        .mall-user .avatar {
+            width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg,#fca5a5,#e93b3d);
+            color: #fff; display: flex; align-items: center; justify-content: center; font-size: 13px;
+        }
+
+        .mall-main { max-width: 1180px; margin: 0 auto; padding: 20px 24px 60px; }
+
+        .category-bar {
+            background: #fff; border-radius: 10px; padding: 14px 18px; display: flex;
+            align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px;
+        }
+        .category-bar .label { font-size: 13px; color: #9ca3af; margin-right: 4px; }
+        .cat-item {
+            padding: 7px 18px; border-radius: 18px; font-size: 13px; color: #4b5563;
+            cursor: pointer; user-select: none; transition: all .2s;
+        }
+        .cat-item:hover { background: #f5f5f5; }
+        .cat-item.active { background: #ffecec; color: #e93b3d; font-weight: 600; }
+
+        .sort-bar {
+            background: #fff; border-radius: 10px; padding: 10px 18px; display: flex;
+            align-items: center; gap: 22px; margin-bottom: 16px; font-size: 13px; color: #4b5563;
+        }
+        .sort-item { cursor: pointer; user-select: none; }
+        .sort-item.active { color: #e93b3d; font-weight: 600; }
+        .sort-bar .count { margin-left: auto; color: #9ca3af; font-size: 12px; }
+
+        .product-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
+
+        .product-card {
+            background: #fff; border-radius: 10px; overflow: hidden; cursor: pointer;
+            transition: all .22s; display: flex; flex-direction: column;
+        }
+        .product-card:hover { transform: translateY(-3px); box-shadow: 0 8px 22px rgba(0,0,0,.1); }
+        .product-card .pic { width: 100%; aspect-ratio: 1 / 1; background: #f3f4f6; object-fit: cover; display: block; }
+        .product-card .info { padding: 12px 12px 14px; }
+        .product-card .pname {
+            font-size: 13px; color: #1f2937; line-height: 1.45; height: 38px;
+            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+            overflow: hidden; text-overflow: ellipsis;
+        }
+        .product-card .prow { display: flex; align-items: flex-end; justify-content: space-between; margin-top: 8px; }
+        .product-card .price { color: #e93b3d; font-weight: 700; font-size: 17px; }
+        .product-card .price small { font-size: 12px; font-weight: 500; }
+        .product-card .sales { font-size: 12px; color: #9ca3af; }
+
+        .empty-box { background: #fff; border-radius: 10px; }
+        @media (max-width: 1100px) { .product-grid { grid-template-columns: repeat(3, 1fr); } }
+        @media (max-width: 700px) { .product-grid { grid-template-columns: repeat(2, 1fr); } }
+    </style>
+</head>
+<body>
+<div class="mall-header">
+    <div class="mall-logo">ZSL 甄选商城 <span>品质好物</span></div>
+    <div class="mall-nav">
+        <a href="mall.html" class="active">全部商品</a>
+        <a href="my-orders.html">我的订单</a>
+        <a href="dashboard.html">商家后台</a>
+    </div>
+    <div class="mall-user"><div class="avatar">用</div><span>user_1001</span></div>
+</div>
+
+<div class="mall-main">
+    <div class="category-bar" id="categoryBar">
+        <span class="label">商品分类：</span>
+    </div>
+
+    <div class="sort-bar">
+        <span class="sort-item active" data-sort="default" onclick="changeSort(this,'default')">综合</span>
+        <span class="sort-item" data-sort="sales" onclick="changeSort(this,'sales')">销量优先</span>
+        <span class="sort-item" data-sort="priceAsc" onclick="changeSort(this,'priceAsc')">价格从低到高</span>
+        <span class="sort-item" data-sort="priceDesc" onclick="changeSort(this,'priceDesc')">价格从高到低</span>
+        <span class="count" id="resultCount"></span>
+    </div>
+
+    <div class="product-grid" id="productGrid"></div>
+    <div id="emptyBox"></div>
+</div>
+
+<script src="assets/common.js"></script>
+<script>
+    const mall = { category: '全部', sort: 'default' };
+
+    async function loadCategories() {
+        const resp = await get('/product/mall/categories');
+        const cats = resp.data || [];
+        const bar = document.getElementById('categoryBar');
+        bar.innerHTML = '<span class="label">商品分类：</span>'
+            + '<div class="cat-item active" onclick="changeCategory(this,\'全部\')">全部</div>'
+            + cats.map(c => '<div class="cat-item" onclick="changeCategory(this,\'' + escapeHtml(c) + '\')">'
+                + escapeHtml(c) + '</div>').join('');
+    }
+
+    async function loadProducts() {
+        const grid = document.getElementById('productGrid');
+        grid.innerHTML = '<div class="loading" style="grid-column:1/-1">加载中…</div>';
+        try {
+            const resp = await get('/product/mall/list', { category: mall.category, sort: mall.sort });
+            const list = resp.data || [];
+            document.getElementById('resultCount').textContent = '共 ' + list.length + ' 件商品';
+            if (!list.length) {
+                grid.innerHTML = '';
+                document.getElementById('emptyBox').innerHTML = '<div class="empty-box"><div class="empty">该分类下暂无在售商品</div></div>';
+                return;
+            }
+            document.getElementById('emptyBox').innerHTML = '';
+            grid.innerHTML = list.map(p =>
+                '<div class="product-card" onclick="location.href=\'product-detail.html?id=' + p.id + '\'">'
+                + '<img class="pic" src="' + escapeHtml(imgSrc(p.coverImage)) + '" alt="' + escapeHtml(p.name) + '" loading="lazy">'
+                + '<div class="info">'
+                + '<div class="pname" title="' + escapeHtml(p.name) + '">' + escapeHtml(p.name) + '</div>'
+                + '<div class="prow"><div class="price"><small>¥</small>' + money(p.salePrice) + '</div>'
+                + '<div class="sales">已售 ' + (p.sales || 0) + '</div></div>'
+                + '</div></div>').join('');
+        } catch (e) {
+            grid.innerHTML = '';
+            document.getElementById('emptyBox').innerHTML = '<div class="empty-box"><div class="empty">无法加载商品，请确认 shop 服务已启动</div></div>';
+        }
+    }
+
+    function changeCategory(el, name) {
+        document.querySelectorAll('.cat-item').forEach(c => c.classList.remove('active'));
+        el.classList.add('active');
+        mall.category = name;
+        loadProducts();
+    }
+
+    function changeSort(el, sort) {
+        document.querySelectorAll('.sort-item').forEach(s => s.classList.remove('active'));
+        el.classList.add('active');
+        mall.sort = sort;
+        loadProducts();
+    }
+
+    loadCategories();
+    loadProducts();
+</script>
+</body>
+</html>

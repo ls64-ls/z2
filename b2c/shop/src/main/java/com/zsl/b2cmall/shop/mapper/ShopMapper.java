@@ -1,0 +1,15 @@
+package com.zsl.b2cmall.shop.mapper;
+
+import com.zsl.b2cmall.shop.entity.Shop;
+import org.apache.ibatis.annotations.Insert;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Options;
+
+@Mapper
+public interface ShopMapper {
+
+    @Insert("INSERT INTO tb_shop (shop_name, admin_account, admin_password, logo_url, status, created_at, updated_at) " +
+            "VALUES (#{shopName}, #{adminAccount}, #{adminPassword}, #{logoUrl}, #{status}, #{createdAt}, #{updatedAt})")
+    @Options(useGeneratedKeys = true, keyProperty = "id")
+    int insert(Shop shop);
+}

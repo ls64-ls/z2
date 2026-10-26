@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>店铺商品管理 - B2C 商城后台</title>
+    <link rel="stylesheet" href="assets/common.css">
+    <style>
+        .table-wrap { overflow-x: auto; }
+        .table { min-width: 1180px; }
+        .col-check { width: 42px; }
+        .thumb-empty { width: 44px; height: 44px; border-radius: 6px; background: #f3f4f6; flex-shrink: 0; }
+        .name-wrap { max-width: 200px; }
+        .name-wrap .n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .name-wrap .c { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+        .warn-text { color: #dc2626; font-weight: 600; }
+        .batch-value-box { display: none; }
+        .batch-value-box.show { display: block; }
+        .checkgroup { display: flex; align-items: center; gap: 8px; }
+    </style>
+</head>
+<body>
+<div class="header">
+    <div class="header-logo">B2C商城 <span>商家后台</span></div>
+    <div class="header-nav">
+        <a class="header-nav-item" data-nav="dashboard" href="dashboard.html">店铺 Dashboard</a>
+        <a class="header-nav-item" data-nav="product" href="product-manage.html">商品管理</a>
+        <a class="header-nav-item" data-nav="order" href="order-manage.html">订单管理</a>
+        <a class="header-nav-item" href="mall.html">C 端商城</a>
+    </div>
+    <div class="header-right">
+        <span>ZSL 甄选旗舰店</span>
+        <div class="user-avatar">商</div>
+    </div>
+</div>
+
+<div class="main">
+    <div class="page-title">店铺商品管理</div>
+
+    <!-- 筛选区 -->
+    <div class="card filter-card">
+        <div class="filter-grid">
+            <div class="filter-item">
+                <label>商品名称</label>
+                <input type="text" id="fName" placeholder="模糊搜索商品名称">
+            </div>
+            <div class="filter-item">
+                <label>商品类型</label>
+                <select id="fProductType"><option value="">全部</option></select>
+            </div>
+            <div class="filter-item">
+                <label>商品类别</label>
+                <select id="fCategoryLabel"><option value="">全部</option></select>
+            </div>
+            <div class="filter-item">
+                <label>状态</label>
+                <select id="fStatus">
+                    <option value="">全部</option>
+                    <option value="1">上架</option>
+                    <option value="0">下架</option>
+                </select>
+            </div>
+            <div class="filter-item">
+                <label>配送方式</label>
+                <div class="multi-select" id="deliveryMulti">
+                    <div class="multi-select-trigger" id="deliveryTrigger">全部</div>
+                    <div class="multi-select-panel" id="deliveryPanel"></div>
+                </div>
+            </div>
+            <div class="filter-item">
+                <label>商品分类</label>
+                <select id="fCategory"><option value="">全部</option></select>
+            </div>
+        </div>
+        <div class="filter-actions">
+            <button class="btn btn-primary" onclick="searchList()">搜索</button>
+            <button class="btn" onclick="resetFilters()">重置</button>
+            <div class="spacer"></div>
+            <button class="btn" onclick="exportExcel()">导出</button>
+            <button class="btn" onclick="openModal('importModal')">导入商品</button>
+            <div class="dropdown">
+                <button class="btn" onclick="toggleDropdown(event,'batchMenu')">批量设置 ▾</button>
+                <div class="dropdown-menu" id="batchMenu">
+                    <div onclick="quickBatch('status',1)">批量上架</div>
+                    <div onclick="quickBatch('status',0)">批量下架</div>
+                    <div onclick="openBatch('deliveryTypes')">修改配送方式</div>
+                    <div onclick="openBatch('category')">修改商品分类</div>
+                    <div onclick="openBatch('sort')">修改排序</div>
+                    <div onclick="openBatch('warehouseStock')">修改仓库库存</div>
+                    <div onclick="openBatch('storeStock')">修改门店库存</div>
+                    <div onclick="openBatch('stockThreshold')">修改库存预警阈值</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 商品列表 -->
+    <div class="table-wrap">
+        <table class="table">
+            <thead>
+            <tr>
+                <th class="col-check"><input type="checkbox" id="checkAll" onchange="toggleAll(this)"></th>
+                <th>商品信息</th>
+                <th>市场价(元)</th>
+                <th>销售价(元)</th>
+                <th>商品销量</th>
+                <th>注水销量</th>
+                <th>仓库库存</th>
+                <th>门店库存</th>
+                <th>商品类型</th>
+                <th>商品类别</th>
+                <th>状态</th>
+                <th>配送方式</th>
+                <th>排序</th>
+                <th>操作</th>
+            </tr>
+            </thead>
+            <tbody id="productBody">
+            <tr><td colspan="14"><div class="loading">加载中…</div></td></tr>
+            </tbody>
+        </table>
+        <div class="pagination" id="pagination"></div>
+    </div>
+</div>
+
+<!-- 编辑弹窗 -->
+<div class="modal-mask" id="editModal">
+    <div class="modal modal-lg">
+        <div class="modal-header">
+            <div class="modal-title" id="editTitle">编辑商品</div>
+            <div class="modal-close" onclick="closeModal('editModal')">×</div>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="eId">
+            <div class="form-grid">
+                <div class="form-row"><label>商品名称</label><input id="eName"></div>
+                <div class="form-row"><label>商品分类</label><input id="eCategory" placeholder="如：数码 / 服装"></div>
+                <div class="form-row"><label>商品类型</label>
+                    <select id="eProductType"><option>普通商品</option><option>秒杀商品</option></select></div>
+                <div class="form-row"><label>商品类别</label>
+                    <select id="eType"><option value="1">实物商品</option><option value="2">虚拟商品</option></select></div>
+                <div class="form-row"><label>市场价(元)</label><input id="eMarketPrice" type="number" step="0.01"></div>
+                <div class="form-row"><label>销售价(元)</label><input id="eSalePrice" type="number" step="0.01"></div>
+                <div class="form-row"><label>仓库库存</label><input id="eWarehouseStock" type="number"></div>
+                <div class="form-row"><label>门店库存</label><input id="eStoreStock" type="number"></div>
+                <div class="form-row"><label>库存预警阈值</label><input id="eStockThreshold" type="number"></div>
+                <div class="form-row"><label>排序（越大越靠前）</label><input id="eSort" type="number"></div>
+            </div>
+            <div class="form-row">
+                <label>配送方式</label>
+                <div class="checkgroup" id="eDelivery">
+                    <label><input type="checkbox" value="快递配送"> 快递配送</label>
+                    <label><input type="checkbox" value="同城配送"> 同城配送</label>
+                    <label><input type="checkbox" value="用户自提"> 用户自提</label>
+                </div>
+            </div>
+            <div class="form-row"><label>商品主图 URL</label><input id="eCoverImage" placeholder="https://..."></div>
+            <div class="form-row"><label>商品描述</label><textarea id="eDescription"></textarea></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn" onclick="closeModal('editModal')">取消</button>
+            <button class="btn btn-primary" onclick="saveEdit()">保存</button>
+        </div>
+    </div>
+</div>
+
+<!-- 导入弹窗 -->
+<div class="modal-mask" id="importModal">
+    <div class="modal">
+        <div class="modal-header">
+            <div class="modal-title">导入商品</div>
+            <div class="modal-close" onclick="closeModal('importModal')">×</div>
+        </div>
+        <div class="modal-body">
+            <p style="font-size:13px;color:#6b7280;line-height:1.8;margin-bottom:14px">
+                请上传 Excel（.xlsx）模板。列顺序：商品ID（留空为新增）、商品名称、市场价、销售价、商品销量、注水销量、
+                仓库库存、门店库存、商品类型、商品类别、商品分类、状态（上架/下架）、配送方式、排序、库存预警阈值。
+            </p>
+            <input type="file" id="importFile" accept=".xlsx,.xls">
+        </div>
+        <div class="modal-footer">
+            <button class="btn" onclick="closeModal('importModal')">取消</button>
+            <button class="btn btn-primary" onclick="doImport()">开始导入</button>
+        </div>
+    </div>
+</div>
+
+<!-- 批量设置弹窗 -->
+<div class="modal-mask" id="batchModal">
+    <div class="modal">
+        <div class="modal-header">
+            <div class="modal-title">批量设置</div>
+            <div class="modal-close" onclick="closeModal('batchModal')">×</div>
+        </div>
+        <div class="modal-body">
+            <div class="form-row">
+                <label>修改字段</label>
+                <select id="batchField" onchange="onBatchFieldChange()">
+                    <option value="status">商品状态</option>
+                    <option value="deliveryTypes">配送方式</option>
+                    <option value="category">商品分类</option>
+                    <option value="sort">排序</option>
+                    <option value="warehouseStock">仓库库存</option>
+                    <option value="storeStock">门店库存</option>
+                    <option value="stockThreshold">库存预警阈值</option>
+                </select>
+            </div>
+            <div class="form-row batch-value-box show" id="batchStatusBox">
+                <label>状态</label>
+                <select id="batchStatus"><option value="1">上架</option><option value="0">下架</option></select>
+            </div>
+            <div class="form-row batch-value-box" id="batchDeliveryBox">
+                <label>配送方式</label>
+                <select id="batchDelivery">
+                    <option value="快递配送">快递配送</option>
+                    <option value="同城配送">同城配送</option>
+                    <option value="用户自提">用户自提</option>
+                    <option value="快递配送,同城配送,用户自提">全部</option>
+                </select>
+            </div>
+            <div class="form-row batch-value-box" id="batchText">
+                <label>设置值</label>
+                <input id="batchValue">
+            </div>
+            <p style="font-size:12px;color:#9ca3af">已选择 <b id="batchCount">0</b> 个商品</p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn" onclick="closeModal('batchModal')">取消</button>
+            <button class="btn btn-primary" onclick="saveBatch()">确定</button>
+        </div>
+    </div>
+</div>
+
+<script src="assets/common.js"></script>
+<script>
+    highlightNav('product');
+
+    const state = { pageNum: 1, pageSize: 10, total: 0, selected: new Set(), list: [], deliverySelected: [] };
+    const urlParams = new URLSearchParams(location.search);
+
+    async function loadOptions() {
+        const resp = await get('/product/options', { shopId: SHOP_ID });
+        const d = resp.data || {};
+        fillSelect('fProductType', d.productTypes);
+        fillSelect('fCategoryLabel', d.categoryLabels);
+        fillSelect('fCategory', d.categories);
+        const panel = document.getElementById('deliveryPanel');
+        panel.innerHTML = (d.deliveryTypes || []).map(v =>
+            '<label><input type="checkbox" value="' + v + '"> ' + v + '</label>').join('');
+        panel.querySelectorAll('input').forEach(cb => {
+            cb.onchange = () => {
+                state.deliverySelected = Array.from(panel.querySelectorAll('input:checked')).map(x => x.value);
+                document.getElementById('deliveryTrigger').textContent = state.deliverySelected.length
+                    ? state.deliverySelected.join('、') : '全部';
+            };
+        });
+        document.getElementById('deliveryTrigger').onclick = (e) => {
+            e.stopPropagation();
+            panel.classList.toggle('show');
+        };
+        document.addEventListener('click', e => {
+            if (!document.getElementById('deliveryMulti').contains(e.target)) panel.classList.remove('show');
+        });
+    }
+
+    function fillSelect(id, arr) {
+        const el = document.getElementById(id);
+        (arr || []).forEach(v => {
+            const o = document.createElement('option');
+            o.value = v;
+            o.textContent = v;
+            el.appendChild(o);
+        });
+    }
+
+    function currentQuery() {
+        return {
+            shopId: SHOP_ID,
+            name: document.getElementById('fName').value.trim(),
+            productType: document.getElementById('fProductType').value,
+            categoryLabel: document.getElementById('fCategoryLabel').value,
+            status: document.getElementById('fStatus').value,
+            deliveryTypes: state.deliverySelected.join(','),
+            category: document.getElementById('fCategory').value,
+            stockWarning: urlParams.get('stockWarning') === '1' ? 1 : '',
+            pageNum: state.pageNum,
+            pageSize: state.pageSize
+        };
+    }
+
+    async function loadList() {
+        try {
+            const resp = await get('/product/page', currentQuery());
+            if (resp.status !== 200) { toast(resp.message || '加载失败'); return; }
+            state.list = resp.data.list || [];
+            state.total = resp.data.total || 0;
+            renderTable();
+            renderPagination(document.getElementById('pagination'), state.pageNum, state.pageSize,
+                state.total, p => { state.pageNum = p; loadList(); });
+        } catch (e) {
+            toast('加载商品失败，请确认后端服务');
+        }
+    }
+
+    function renderTable() {
+        const body = document.getElementById('productBody');
+        if (!state.list.length) {
+            body.innerHTML = '<tr><td colspan="14"><div class="empty">暂无商品数据</div></td></tr>';
+            return;
+        }
+        body.innerHTML = state.list.map(p => {
+            const checked = state.selected.has(p.id) ? 'checked' : '';
+            const img = p.coverImage
+                ? '<img class="product-thumb" src="' + escapeHtml(p.coverImage) + '" alt="">'
+                : '<div class="thumb-empty"></div>';
+            const total = (p.warehouseStock || 0) + (p.storeStock || 0);
+            const warn = p.stockThreshold > 0 && total < p.stockThreshold;
+            return '<tr>'
+                + '<td><input type="checkbox" ' + checked + ' onchange="toggleOne(' + p.id + ',this)"></td>'
+                + '<td><div class="product-cell">' + img
+                + '<div class="name-wrap"><div class="n" title="' + escapeHtml(p.name) + '">' + escapeHtml(p.name) + '</div>'
+                + '<div class="c">ID: ' + p.id + '</div></div></div></td>'
+                + '<td><span class="price-old">¥' + money(p.marketPrice) + '</span></td>'
+                + '<td><span class="price-sale">¥' + money(p.salePrice) + '</span></td>'
+                + '<td>' + (p.sales || 0) + '</td>'
+                + '<td>' + (p.fakeSales || 0) + '</td>'
+                + '<td class="' + (warn ? 'warn-text' : '') + '">' + (p.warehouseStock || 0) + '</td>'
+                + '<td class="' + (warn ? 'warn-text' : '') + '">' + (p.storeStock || 0) + '</td>'
+                + '<td>' + escapeHtml(p.productType || '普通商品') + '</td>'
+                + '<td>' + escapeHtml(p.categoryLabel || '') + '</td>'
+                + '<td>' + (p.status === 1 ? '<span class="badge badge-green">上架</span>'
+                    : '<span class="badge badge-gray">下架</span>') + '</td>'
+                + '<td>' + escapeHtml((p.deliveryTypes || '').replace(/,/g, ' / ')) + '</td>'
+                + '<td>' + (p.sort || 0) + '</td>'
+                + '<td><div class="ops">'
+                + '<span class="link" onclick="openEdit(' + p.id + ')">编辑</span>'
+                + '<span class="link" onclick="toggleStatus(' + p.id + ',' + p.status + ')">'
+                + (p.status === 1 ? '下架' : '上架') + '</span>'
+                + '<span class="link-danger" onclick="removeProduct(' + p.id + ')">删除</span>'
+                + '</div></td>'
+                + '</tr>';
+        }).join('');
+        const allChecked = state.list.every(p => state.selected.has(p.id));
+        document.getElementById('checkAll').checked = state.list.length > 0 && allChecked;
+    }
+
+    function toggleOne(id, el) {
+        el.checked ? state.selected.add(id) : state.selected.delete(id);
+    }
+
+    function toggleAll(el) {
+        state.list.forEach(p => el.checked ? state.selected.add(p.id) : state.selected.delete(p.id));
+        renderTable();
+    }
+
+    function searchList() {
+        state.pageNum = 1;
+        state.selected.clear();
+        loadList();
+    }
+
+    function resetFilters() {
+        document.getElementById('fName').value = '';
+        ['fProductType', 'fCategoryLabel', 'fStatus', 'fCategory'].forEach(id => document.getElementById(id).value = '');
+        state.deliverySelected = [];
+        document.querySelectorAll('#deliveryPanel input').forEach(cb => cb.checked = false);
+        document.getElementById('deliveryTrigger').textContent = '全部';
+        state.selected.clear();
+        state.pageNum = 1;
+        loadList();
+    }
+
+    function exportExcel() {
+        const q = currentQuery();
+        delete q.pageNum;
+        delete q.pageSize;
+        window.open(API + '/product/export?' + qs(q), '_blank');
+    }
+
+    async function toggleStatus(id, status) {
+        const next = status === 1 ? 0 : 1;
+        const resp = await post('/product/status', { id: id, shopId: SHOP_ID, status: next });
+        toast(resp.message || '操作完成');
+        if (resp.status === 200) loadList();
+    }
+
+    async function removeProduct(id) {
+        if (!confirmAction('确定要删除该商品吗？已产生订单的商品禁止删除。')) return;
+        const resp = await del('/product/delete', { id: id, shopId: SHOP_ID });
+        toast(resp.message || '操作完成');
+        if (resp.status === 200) { state.selected.delete(id); loadList(); }
+    }
+
+    // ===== 编辑 =====
+    function openEdit(id) {
+        const p = state.list.find(x => x.id === id);
+        if (!p) return;
+        document.getElementById('editTitle').textContent = '编辑商品 - ' + p.name;
+        document.getElementById('eId').value = p.id;
+        document.getElementById('eName').value = p.name || '';
+        document.getElementById('eCategory').value = p.category || '';
+        document.getElementById('eProductType').value = p.productType || '普通商品';
+        document.getElementById('eType').value = p.type || 1;
+        document.getElementById('eMarketPrice').value = p.marketPrice || 0;
+        document.getElementById('eSalePrice').value = p.salePrice || 0;
+        document.getElementById('eWarehouseStock').value = p.warehouseStock || 0;
+        document.getElementById('eStoreStock').value = p.storeStock || 0;
+        document.getElementById('eStockThreshold').value = p.stockThreshold || 0;
+        document.getElementById('eSort').value = p.sort || 0;
+        document.getElementById('eCoverImage').value = p.coverImage || '';
+        document.getElementById('eDescription').value = p.description || '';
+        const set = (p.deliveryTypes || '').split(',');
+        document.querySelectorAll('#eDelivery input').forEach(cb => cb.checked = set.includes(cb.value));
+        openModal('editModal');
+    }
+
+    async function saveEdit() {
+        const delivery = Array.from(document.querySelectorAll('#eDelivery input:checked')).map(x => x.value).join(',');
+        if (!document.getElementById('eName').value.trim()) { toast('请输入商品名称'); return; }
+        if (!delivery) { toast('请选择至少一种配送方式'); return; }
+        const body = {
+            id: Number(document.getElementById('eId').value),
+            shopId: SHOP_ID,
+            name: document.getElementById('eName').value.trim(),
+            category: document.getElementById('eCategory').value.trim(),
+            productType: document.getElementById('eProductType').value,
+            type: Number(document.getElementById('eType').value),
+            marketPrice: Number(document.getElementById('eMarketPrice').value || 0),
+            salePrice: Number(document.getElementById('eSalePrice').value || 0),
+            warehouseStock: Number(document.getElementById('eWarehouseStock').value || 0),
+            storeStock: Number(document.getElementById('eStoreStock').value || 0),
+            stockThreshold: Number(document.getElementById('eStockThreshold').value || 0),
+            sort: Number(document.getElementById('eSort').value || 0),
+            deliveryTypes: delivery,
+            coverImage: document.getElementById('eCoverImage').value.trim(),
+            description: document.getElementById('eDescription').value.trim()
+        };
+        const resp = await post('/product/update', body);
+        toast(resp.message || '保存完成');
+        if (resp.status === 200) { closeModal('editModal'); loadList(); }
+    }
+
+    // ===== 导入 =====
+    async function doImport() {
+        const file = document.getElementById('importFile').files[0];
+        if (!file) { toast('请选择 Excel 文件'); return; }
+        const fd = new FormData();
+        fd.append('file', file);
+        try {
+            const resp = await fetch(API + '/product/import?shopId=' + SHOP_ID, { method: 'POST', body: fd });
+            const data = await resp.json();
+            toast(data.message || '导入完成');
+            if (data.status === 200) {
+                closeModal('importModal');
+                document.getElementById('importFile').value = '';
+                loadList();
+            }
+        } catch (e) {
+            toast('导入失败：' + e.message);
+        }
+    }
+
+    // ===== 批量 =====
+    function toggleDropdown(e, id) {
+        e.stopPropagation();
+        document.getElementById(id).classList.toggle('show');
+    }
+    document.addEventListener('click', () => {
+        const menu = document.getElementById('batchMenu');
+        if (menu) menu.classList.remove('show');
+    });
+
+    function selectedIds() {
+        return Array.from(state.selected);
+    }
+
+    function quickBatch(field, value) {
+        if (!selectedIds().length) { toast('请先勾选商品'); return; }
+        doBatch(field, value);
+    }
+
+    function openBatch(field) {
+        if (!selectedIds().length) { toast('请先勾选商品'); return; }
+        document.getElementById('batchCount').textContent = state.selected.size;
+        document.getElementById('batchField').value = field;
+        onBatchFieldChange();
+        openModal('batchModal');
+        document.getElementById('batchField').value = field;
+    }
+
+    function onBatchFieldChange() {
+        const f = document.getElementById('batchField').value;
+        document.getElementById('batchStatusBox').classList.toggle('show', f === 'status');
+        document.getElementById('batchDeliveryBox').classList.toggle('show', f === 'deliveryTypes');
+        document.getElementById('batchText').classList.toggle('show', f !== 'status' && f !== 'deliveryTypes');
+        const t = document.getElementById('batchText').querySelector('input');
+        t.type = ['sort', 'warehouseStock', 'storeStock', 'stockThreshold'].includes(f) ? 'number' : 'text';
+        t.placeholder = f === 'category' ? '如：数码' : '请输入数值';
+    }
+
+    async function saveBatch() {
+        const f = document.getElementById('batchField').value;
+        let value;
+        if (f === 'status') value = Number(document.getElementById('batchStatus').value);
+        else if (f === 'deliveryTypes') value = document.getElementById('batchDelivery').value;
+        else value = document.getElementById('batchText').querySelector('input').value;
+        doBatch(f, value);
+    }
+
+    async function doBatch(field, value) {
+        const resp = await post('/product/batch', { ids: selectedIds(), field: field, value: value });
+        toast(resp.message || '操作完成');
+        if (resp.status === 200) { closeModal('batchModal'); state.selected.clear(); loadList(); }
+    }
+
+    (async function init() {
+        await loadOptions();
+        if (urlParams.get('stockWarning') === '1') {
+            document.querySelector('.page-title').textContent = '库存预警商品';
+        }
+        loadList();
+    })();
+</script>
+</body>
+</html>
