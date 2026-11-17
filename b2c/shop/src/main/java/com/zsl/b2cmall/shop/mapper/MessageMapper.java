@@ -22,6 +22,6 @@ public interface MessageMapper {
     @Select("SELECT COUNT(*) FROM tb_message WHERE shop_id = #{shopId} AND is_read = 0")
     int countUnread(@Param("shopId") Integer shopId);
 
-    @Update("UPDATE tb_message SET is_read = 1, read_time = datetime('now','localtime') WHERE id = #{id}")
+    @Update("UPDATE tb_message SET is_read = 1, read_time = NOW() WHERE id = #{id}")
     int markRead(@Param("id") Integer id);
 }

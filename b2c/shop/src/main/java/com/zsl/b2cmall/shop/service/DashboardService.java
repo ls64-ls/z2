@@ -45,8 +45,8 @@ public class DashboardService {
         List<Integer> hours = new ArrayList<>();
         List<BigDecimal> todayAmounts = new ArrayList<>();
         List<BigDecimal> yesterdayAmounts = new ArrayList<>();
-        Map<Integer, BigDecimal> todayMap = hourlyMap(shopId, "+0 day");
-        Map<Integer, BigDecimal> yesterdayMap = hourlyMap(shopId, "-1 day");
+        Map<Integer, BigDecimal> todayMap = hourlyMap(shopId, 0);
+        Map<Integer, BigDecimal> yesterdayMap = hourlyMap(shopId, -1);
         for (int h = 0; h < 24; h++) {
             hours.add(h);
             todayAmounts.add(todayMap.getOrDefault(h, BigDecimal.ZERO));
@@ -79,9 +79,9 @@ public class DashboardService {
         return vo;
     }
 
-    private Map<Integer, BigDecimal> hourlyMap(Integer shopId, String offset) {
+    private Map<Integer, BigDecimal> hourlyMap(Integer shopId, int dayOffset) {
         Map<Integer, BigDecimal> map = new HashMap<>();
-        List<Map<String, Object>> rows = orderMapper.sumHourly(shopId, offset);
+        List<Map<String, Object>> rows = orderMapper.sumHourly(shopId, dayOffset);
         for (Map<String, Object> row : rows) {
             Object h = row.get("h");
             Object amt = row.get("amt");
@@ -97,14 +97,14 @@ public class DashboardService {
         List<DashboardVO.MetricItem> metrics = new ArrayList<>();
 
         // 今日 / 昨日 基础数据
-        int todayCustomers = orderMapper.countPaidCustomers(shopId, "+0 day");
-        int yesterdayCustomers = orderMapper.countPaidCustomers(shopId, "-1 day");
-        int todayOrders = orderMapper.countPaidOrders(shopId, "+0 day");
-        int yesterdayOrders = orderMapper.countPaidOrders(shopId, "-1 day");
-        BigDecimal todayAmount = money(orderMapper.sumPaidAmount(shopId, "+0 day"));
-        BigDecimal yesterdayAmount = money(orderMapper.sumPaidAmount(shopId, "-1 day"));
-        BigDecimal todayRefund = money(refundMapper.sumCompletedAmount("+0 day"));
-        BigDecimal yesterdayRefund = money(refundMapper.sumCompletedAmount("-1 day"));
+        int todayCustomers = orderMapper.countPaidCustomers(shopId, 0);
+        int yesterdayCustomers = orderMapper.countPaidCustomers(shopId, -1);
+        int todayOrders = orderMapper.countPaidOrders(shopId, 0);
+        int yesterdayOrders = orderMapper.countPaidOrders(shopId, -1);
+        BigDecimal todayAmount = money(orderMapper.sumPaidAmount(shopId, 0));
+        BigDecimal yesterdayAmount = money(orderMapper.sumPaidAmount(shopId, -1));
+        BigDecimal todayRefund = money(refundMapper.sumCompletedAmount(0));
+        BigDecimal yesterdayRefund = money(refundMapper.sumCompletedAmount(-1));
 
         // 客单价 = 今日总支付金额 ÷ 支付订单数
         BigDecimal todayAvg = todayOrders == 0 ? BigDecimal.ZERO

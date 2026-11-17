@@ -290,7 +290,8 @@
             showToast(`${loginType}登录中...`);
 
             try {
-                const resp = await fetch('http://localhost:8092/employee/login', {
+                const apiBase = location.port === '8010' ? 'http://localhost:8092' : '/api/employee';
+                const resp = await fetch(apiBase + '/employee/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ shopId: 3, username, password })

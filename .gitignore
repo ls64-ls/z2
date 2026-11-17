@@ -36,3 +36,5 @@ node_modules/
 dist/
 tmp/
 .trae/
+.screenshots/
+.trae-html-share-packages/

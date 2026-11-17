@@ -42,35 +42,35 @@ public interface OrderMapper {
             "AND (IFNULL(warehouse_stock,0) + IFNULL(store_stock,0)) < stock_threshold")
     int countStockWarning(@Param("shopId") Integer shopId);
 
-    /** 支付金额（按日期偏移） */
+    /** 支付金额（按日期偏移，0=今天，-1=昨天） */
     @Select("SELECT IFNULL(SUM(amount),0) FROM tb_order WHERE shop_id = #{shopId} AND deleted = 0 " +
-            "AND status IN ('PAID','SENT','COMPLETED') AND date(paid_at) = date('now','localtime', #{offset})")
-    Double sumPaidAmount(@Param("shopId") Integer shopId, @Param("offset") String offset);
+            "AND status IN ('PAID','SENT','COMPLETED') AND DATE(paid_at) = DATE_ADD(CURDATE(), INTERVAL #{dayOffset} DAY)")
+    Double sumPaidAmount(@Param("shopId") Integer shopId, @Param("dayOffset") int dayOffset);
 
     /** 支付订单数（按日期偏移） */
     @Select("SELECT COUNT(*) FROM tb_order WHERE shop_id = #{shopId} AND deleted = 0 " +
-            "AND status IN ('PAID','SENT','COMPLETED') AND date(paid_at) = date('now','localtime', #{offset})")
-    int countPaidOrders(@Param("shopId") Integer shopId, @Param("offset") String offset);
+            "AND status IN ('PAID','SENT','COMPLETED') AND DATE(paid_at) = DATE_ADD(CURDATE(), INTERVAL #{dayOffset} DAY)")
+    int countPaidOrders(@Param("shopId") Integer shopId, @Param("dayOffset") int dayOffset);
 
     /** 支付客户数（按日期偏移，独立客户） */
     @Select("SELECT COUNT(DISTINCT IFNULL(user_id, buyer_phone)) FROM tb_order WHERE shop_id = #{shopId} AND deleted = 0 " +
-            "AND status IN ('PAID','SENT','COMPLETED') AND date(paid_at) = date('now','localtime', #{offset})")
-    int countPaidCustomers(@Param("shopId") Integer shopId, @Param("offset") String offset);
+            "AND status IN ('PAID','SENT','COMPLETED') AND DATE(paid_at) = DATE_ADD(CURDATE(), INTERVAL #{dayOffset} DAY)")
+    int countPaidCustomers(@Param("shopId") Integer shopId, @Param("dayOffset") int dayOffset);
 
     /** 按小时统计支付金额 */
-    @Select("SELECT CAST(strftime('%H', paid_at) AS INTEGER) AS h, IFNULL(SUM(amount),0) AS amt FROM tb_order " +
+    @Select("SELECT HOUR(paid_at) AS h, IFNULL(SUM(amount),0) AS amt FROM tb_order " +
             "WHERE shop_id = #{shopId} AND deleted = 0 AND status IN ('PAID','SENT','COMPLETED') " +
-            "AND date(paid_at) = date('now','localtime', #{offset}) GROUP BY h")
-    List<Map<String, Object>> sumHourly(@Param("shopId") Integer shopId, @Param("offset") String offset);
+            "AND DATE(paid_at) = DATE_ADD(CURDATE(), INTERVAL #{dayOffset} DAY) GROUP BY HOUR(paid_at)")
+    List<Map<String, Object>> sumHourly(@Param("shopId") Integer shopId, @Param("dayOffset") int dayOffset);
 
     /** 发货 */
     @Update("UPDATE tb_order SET status = 'SENT', logistics_type = #{logisticsType}, delivery_no = #{deliveryNo}, " +
-            "shipped_at = datetime('now','localtime') WHERE id = #{id} AND status = 'PAID'")
+            "shipped_at = NOW() WHERE id = #{id} AND status = 'PAID'")
     int markSent(@Param("id") Integer id, @Param("logisticsType") String logisticsType,
                  @Param("deliveryNo") String deliveryNo);
 
     /** 确认收货 */
-    @Update("UPDATE tb_order SET status = 'COMPLETED', completed_at = datetime('now','localtime') " +
+    @Update("UPDATE tb_order SET status = 'COMPLETED', completed_at = NOW() " +
             "WHERE id = #{id} AND status = 'SENT'")
     int markCompleted(@Param("id") Integer id);
 

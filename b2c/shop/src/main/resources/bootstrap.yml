@@ -7,9 +7,9 @@ spring:
   cloud:
     nacos:
       discovery:
-        server-addr: 47.100.22.158:8848
-        namespace: zhushilu
+        server-addr: ${NACOS_ADDR:47.100.22.158:8848}
+        namespace: ${NACOS_NAMESPACE:zhushilu}
       config:
-        server-addr: 47.100.22.158:8848
-        namespace: zhushilu
+        server-addr: ${NACOS_ADDR:47.100.22.158:8848}
+        namespace: ${NACOS_NAMESPACE:zhushilu}
         file-extension: yaml

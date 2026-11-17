@@ -1,5 +1,6 @@
 /* ===== 通用脚本：接口请求 / 格式化 / 提示 ===== */
-const API = 'http://localhost:8091';
+// 本地静态调试（8010）直连后端；容器部署时由 nginx 反向代理到 /api/shop
+const API = location.port === '8010' ? 'http://localhost:8091' : '/api/shop';
 const SHOP_ID = 3;
 const USER_ID = 1001;
 

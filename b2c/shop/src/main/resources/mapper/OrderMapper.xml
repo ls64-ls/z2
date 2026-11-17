@@ -18,10 +18,10 @@
                 AND status = #{status}
             </if>
             <if test="receiverName != null and receiverName != ''">
-                AND buyer_name LIKE '%' || #{receiverName} || '%'
+                AND buyer_name LIKE CONCAT('%', #{receiverName}, '%')
             </if>
             <if test="phone != null and phone != ''">
-                AND buyer_phone LIKE '%' || #{phone} || '%'
+                AND buyer_phone LIKE CONCAT('%', #{phone}, '%')
             </if>
             <if test="payType != null and payType != ''">
                 AND pay_type = #{payType}
@@ -33,13 +33,13 @@
                 AND logistics_type = #{logisticsType}
             </if>
             <if test="storeName != null and storeName != ''">
-                AND store_name LIKE '%' || #{storeName} || '%'
+                AND store_name LIKE CONCAT('%', #{storeName}, '%')
             </if>
             <if test="startDate != null and startDate != ''">
-                AND date(created_at) &gt;= date(#{startDate})
+                AND DATE(created_at) &gt;= DATE(#{startDate})
             </if>
             <if test="endDate != null and endDate != ''">
-                AND date(created_at) &lt;= date(#{endDate})
+                AND DATE(created_at) &lt;= DATE(#{endDate})
             </if>
         </where>
     </sql>

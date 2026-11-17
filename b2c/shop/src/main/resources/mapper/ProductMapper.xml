@@ -6,7 +6,7 @@
         <where>
             shop_id = #{shopId}
             <if test="name != null and name != ''">
-                AND name LIKE '%' || #{name} || '%'
+                AND name LIKE CONCAT('%', #{name}, '%')
             </if>
             <if test="productType != null and productType != ''">
                 AND product_type = #{productType}
@@ -26,7 +26,7 @@
             <if test="deliveryTypeList != null and deliveryTypeList.size() > 0">
                 AND (
                 <foreach collection="deliveryTypeList" item="dt" separator=" OR ">
-                    delivery_types LIKE '%' || #{dt} || '%'
+                    delivery_types LIKE CONCAT('%', #{dt}, '%')
                 </foreach>
                 )
             </if>

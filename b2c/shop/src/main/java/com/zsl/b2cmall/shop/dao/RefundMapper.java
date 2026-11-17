@@ -12,8 +12,8 @@ public interface RefundMapper {
     int countPending();
 
     @Select("SELECT IFNULL(SUM(amount),0) FROM tb_refund WHERE status = '退款完成' " +
-            "AND date(handled_at) = date('now','localtime', #{offset})")
-    Double sumCompletedAmount(@Param("offset") String offset);
+            "AND DATE(handled_at) = DATE_ADD(CURDATE(), INTERVAL #{dayOffset} DAY)")
+    Double sumCompletedAmount(@Param("dayOffset") int dayOffset);
 
     @Select("SELECT * FROM tb_refund WHERE order_id = #{orderId} ORDER BY id DESC LIMIT 1")
     RefundPO findByOrderId(@Param("orderId") Integer orderId);
